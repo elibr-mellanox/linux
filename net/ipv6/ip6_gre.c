@@ -2309,6 +2309,51 @@ static struct rtnl_link_ops ip6erspan_tap_ops __read_mostly = {
 	.get_link_net	= ip6_tnl_get_link_net,
 };
 
+struct net_device *ip6gretap_fb_dev_create(struct net *net, const char *name,
+					   u8 name_assign_type)
+{
+	struct nlattr *tb[IFLA_MAX + 1];
+	struct net_device *dev;
+	LIST_HEAD(list_kill);
+	struct ip_tunnel *t;
+	int err;
+
+	memset(&tb, 0, sizeof(tb));
+
+	dev = rtnl_create_link(net, name, name_assign_type,
+			       &ip6gre_tap_ops, tb, NULL);
+	if (IS_ERR(dev))
+		return dev;
+
+	/* Configure flow based GRE device. */
+	t = netdev_priv(dev);
+	t->collect_md = true;
+
+	err = ip6gre_newlink(net, dev, tb, NULL, NULL);
+	if (err < 0) {
+		free_netdev(dev);
+		return ERR_PTR(err);
+	}
+
+	/* openvswitch users expect packet sizes to be unrestricted,
+	 * so set the largest MTU we can.
+	 */
+	err = ip6_tnl_change_mtu(dev, IP_MAX_MTU);
+	if (err)
+		goto out;
+
+	err = rtnl_configure_link(dev, NULL);
+	if (err < 0)
+		goto out;
+
+	return dev;
+out:
+	ip6gre_dellink(dev, &list_kill);
+	unregister_netdevice_many(&list_kill);
+	return ERR_PTR(err);
+}
+EXPORT_SYMBOL_GPL(ip6gretap_fb_dev_create);
+
 /*
  *	And now the modules code and kernel interface.
  */
