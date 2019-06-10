@@ -51,6 +51,19 @@ config OPENVSWITCH_GRE
 
 	  If unsure, say Y.
 
+config OPENVSWITCH_IP6GRE
+	tristate "Open vSwitch IPv6 GRE tunneling support"
+	depends on OPENVSWITCH
+	depends on IPV6_GRE
+	default OPENVSWITCH
+	---help---
+	  If you say Y here, then the Open vSwitch will be able create IPv6
+	  GRE vport.
+
+	  Say N to exclude this support and reduce the binary size.
+
+	  If unsure, say Y.
+
 config OPENVSWITCH_VXLAN
 	tristate "Open vSwitch VXLAN tunneling support"
 	depends on OPENVSWITCH
